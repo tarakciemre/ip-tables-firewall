@@ -57,6 +57,20 @@ activate_interfaces() {
 	done
 }
 
+test_pings() {
+	echo -e "\n=> ####### Ping the hosts"
+	counter=2
+	for i in "${FirewallConnection[@]}"
+	do
+		echo "pinging..."
+		sudo ip netns exec "$i" ping -c 1 192.168.2.$counter
+		((counter=counter+1))
+		echo "pinging..."
+		sudo ip netns exec firewall ping -c 1 192.168.2.$counter
+		((counter=counter+63))
+		# ((counter++))
+	done
+}
 
 remove_namespaces
 add_namespaces
@@ -72,6 +86,7 @@ examine_namespaces
 # sudo ip netns exec firewall iptables -A FORWARD -i veth-client1 -o veth-server -m conntrack --ctstate ESTABLISHED,RELATED,NEW -j ACCEPT
 # sudo ip netns exec firewall iptables -A FORWARD -i veth-client2 -o veth-server -m conntrack --ctstate ESTABLISHED,RELATED,NEW -j ACCEPT
 
+test_pings
 sudo ip netns exec server node server.js
 sudo ip netns exec firewall curl 192.168.2.130:8000
 # examine_namespaces
