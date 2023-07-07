@@ -49,9 +49,9 @@ activate_interfaces() {
 		sudo ip -n "$i" link set lo up
 		sudo ip -n "$i" link set veth-firewall up
 		sudo ip -n firewall link set "veth-$i" up
-		sudo ip -n "$i" addr add 192.168.2.$counter dev veth-firewall
+		sudo ip -n "$i" addr add 192.168.2.$counter/26 dev veth-firewall
 		((counter=counter+1))
-		sudo ip -n firewall addr add 192.168.2.$counter dev "veth-$i"
+		sudo ip -n firewall addr add 192.168.2.$counter/26 dev "veth-$i"
 		((counter=counter+63))
 		# ((counter++))
 	done
@@ -85,6 +85,11 @@ examine_namespaces
 # sudo ip -n firewall route add 192.168.2.128/26 dev veth-server
 # sudo ip netns exec firewall iptables -A FORWARD -i veth-client1 -o veth-server -m conntrack --ctstate ESTABLISHED,RELATED,NEW -j ACCEPT
 # sudo ip netns exec firewall iptables -A FORWARD -i veth-client2 -o veth-server -m conntrack --ctstate ESTABLISHED,RELATED,NEW -j ACCEPT
+
+
+# Add Default Gateway
+sudo ip netns exec client2 ip route add default via 192.168.2.66 dev veth-firewall
+sudo ip netns exec client1 ip route add default via 192.168.2.2 dev veth-firewall
 
 test_pings
 sudo ip netns exec server node server.js
