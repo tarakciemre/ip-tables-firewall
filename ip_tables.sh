@@ -115,20 +115,25 @@ test_firewall() {
 	printf "\n############## TEST FIREWALL END ##########\n"
 }
 
+# Reset the namespaces
 remove_namespaces
 add_namespaces
+
 set_veth_connections
 activate_interfaces
 examine_namespaces
+
 setup_routes
 test_pings
+
+# Start the server
 sudo ip netns exec server node server.js &
 sleep 0.5
+
 setup_firewall
 test_firewall
-# sudo ip netns exec firewall curl 192.0.2.130:8000
-# examine_namespaces
-printf ""
+
+echo ""
 
 
 
