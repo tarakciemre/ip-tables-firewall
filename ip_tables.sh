@@ -42,16 +42,22 @@ activate_interfaces() {
 	echo -e "\n=> Add ip addresses and activate interfaces..."
 	counter=2
 	sudo ip -n firewall link set lo up
+	# sudo ip netns exec firewall ip route add 192.0.2.128/26 via 192.0.2.130 dev veth-server
+	sudo ip netns exec firewall ip route add 192.0.2.128/26 via 192.0.2.130 dev veth-firewall
+	echo "something -==="
 	for i in "${FirewallConnection[@]}"
 	do
 		echo "$counter"
 		# sudo ip link add "veth-$i" type veth peer name veth-firewall
+
+		#sudo ip netns exec firewall ip route add 192.0.2.64/26 via 192.0.2.130
+		#sudo ip netns exec firewall ip route add 192.0.2.0/26 via 192.0.2.130
 		sudo ip -n "$i" link set lo up
 		sudo ip -n "$i" link set veth-firewall up
 		sudo ip -n firewall link set "veth-$i" up
-		sudo ip -n "$i" addr add 192.168.2.$counter/26 dev veth-firewall
+		sudo ip -n "$i" addr add 192.0.2.$counter/26 dev veth-firewall
 		((counter=counter+1))
-		sudo ip -n firewall addr add 192.168.2.$counter/26 dev "veth-$i"
+		sudo ip -n firewall addr add 192.0.2.$counter/26 dev "veth-$i"
 		((counter=counter+63))
 		# ((counter++))
 	done
@@ -63,10 +69,10 @@ test_pings() {
 	for i in "${FirewallConnection[@]}"
 	do
 		echo "pinging..."
-		sudo ip netns exec "$i" ping -c 1 192.168.2.$counter
+		sudo ip netns exec "$i" ping -c 1 192.0.2.$counter
 		((counter=counter+1))
 		echo "pinging..."
-		sudo ip netns exec firewall ping -c 1 192.168.2.$counter
+		sudo ip netns exec firewall ping -c 1 192.0.2.$counter
 		((counter=counter+63))
 		# ((counter++))
 	done
@@ -77,23 +83,27 @@ add_namespaces
 set_veth_connections
 activate_interfaces
 examine_namespaces
-# sudo ip netns exec firewall ping 192.168.20.4
-# sudo ip netns exec server systemctl start nginx
 
-# sudo ip -n firewall route add 192.168.2.0/26 dev veth-client1
-# sudo ip -n firewall route add 192.168.2.64/26 dev veth-client2
-# sudo ip -n firewall route add 192.168.2.128/26 dev veth-server
-# sudo ip netns exec firewall iptables -A FORWARD -i veth-client1 -o veth-server -m conntrack --ctstate ESTABLISHED,RELATED,NEW -j ACCEPT
-# sudo ip netns exec firewall iptables -A FORWARD -i veth-client2 -o veth-server -m conntrack --ctstate ESTABLISHED,RELATED,NEW -j ACCEPT
+# Add Default Gateway to clients
+sudo ip netns exec client2 ip route add default via 192.0.2.67 dev veth-firewall
+sudo ip netns exec client1 ip route add default via 192.0.2.3 dev veth-firewall
 
+sudo ip netns exec firewall sysctl -w net.ipv4.ip_forward=1
 
-# Add Default Gateway
-sudo ip netns exec client2 ip route add default via 192.168.2.66 dev veth-firewall
-sudo ip netns exec client1 ip route add default via 192.168.2.2 dev veth-firewall
+## SETUP ROUTES
+sudo ip netns exec firewall ip route add 192.0.2.0/26 via 0.0.0.0 dev veth-client1
+sudo ip netns exec firewall ip route add 192.0.2.64/26 via 0.0.0.0 dev veth-client2
+sudo ip netns exec firewall ip route add 192.0.2.128/26 via 0.0.0.0 dev veth-server
+
+sudo ip netns exec server ip route add 192.0.2.0/26 via 192.0.2.131 dev veth-firewall
+sudo ip netns exec server ip route add 192.0.2.0/26 via 192.0.2.131 dev veth-firewall
+
+# sudo ip netns exec server ip route add default via 192.0.2.131
+# sudo ip netns exec server ip route add 192.0.2.128/26 via 192.0.2.2
 
 test_pings
 sudo ip netns exec server node server.js
-sudo ip netns exec firewall curl 192.168.2.130:8000
+# sudo ip netns exec firewall curl 192.0.2.130:8000
 # examine_namespaces
 
 
