@@ -110,47 +110,45 @@ setup_firewall() {
 	echo "# FIREWALL $?"
 }
 
+assert_fail() {
+	if [ $? == 0 ]
+	then
+		printf "\nFailed"
+	else
+		printf "\nPassed"
+	fi
+}
+
+assert_succeed() {
+	if [ $? == 0 ]
+	then
+		printf "\nPassed"
+	else
+		printf "\nFailed"
+	fi
+}
+
 test_firewall() {
 	printf "\n############## TEST FIREWALL  #############"
-	printf "\n#### Client1 pings Server... (should ACCEPT) ==\n"
 	sudo ip netns exec client1 ping -c 1 192.0.2.130 -w 1 > /dev/null
-	if [ $? == 0 ]
-	then
-		echo "Passed"
-	else
-		echo "Failed"
-	fi
+	assert_succeed
+	printf ": Client1 pings Server... (should ACCEPT)"
 
-	printf "\n#### Client2 requests HTTP page from Server... (should ACCEPT) ==\n"
 	sudo ip netns exec client2 curl --connect-timeout 1 192.0.2.130:8000 > /dev/null
-	if [ $? == 0 ]
-	then
-		echo "Passed"
-	else
-		echo "Failed"
-	fi
+	assert_succeed
+	printf ": Client2 requests HTTP page from Server... (should ACCEPT)"
 
-	#echo "$?"
-	printf "\n#### Client2 pings Firewall... (should ACCEPT) ==\n"
+	#printf "$?"
 	sudo ip netns exec client2 ping -c 1 -w 1 192.0.2.67 > /dev/null
-	if [ $? == 0 ]
-	then
-		echo "Passed"
-	else
-		echo "Failed"
-	fi
+	assert_succeed
+	printf ": Client2 pings Firewall... (should ACCEPT)"
 
-	#echo "$?"
-	printf "\n#### Client1 pings Firewall... (should REJECT) ==\n"
-	sudo ip netns exec client1 ping -c 1 192.0.2.3 > -w 1 /dev/null
-	if [ $? == 0 ]
-	then
-		echo "Failed"
-	else
-		echo "Passed"
-	fi
+	#printf "$?"
+	sudo ip netns exec client1 ping -c 1 192.0.2.3 -w 1 > /dev/null
+	assert_fail
+	printf ": Client1 pings Firewall... (should REJECT)"
 
-	#echo "$?"
+	#printf "$?"
 	printf "\n############## TEST FIREWALL END ##########\n"
 }
 
