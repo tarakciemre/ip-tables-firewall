@@ -95,11 +95,19 @@ setup_routes() {
 }
 
 setup_firewall() {
-	# sudo ip netns exec firewall iptables -A INPUT -p icmp -i veth-client1 -j DROP
-	# sudo ip netns exec firewall iptables -A INPUT -i veth-client1 -j DROP
-	# sudo ip netns exec firewall iptables -A INPUT -i veth-client2 -j DROP
-	# sudo ip netns exec firewall iptables -A INPUT -i veth-server -j DROP
-	sudo ip netns exec firewall iptables -P POSTROUTING DROP
+	# Accepted states
+	sudo ip netns exec firewall iptables -A INPUT -p icmp -s 192.0.2.66/26 -j ACCEPT  	# client2 can ping the firewall
+	sudo ip netns exec firewall iptables -A FORWARD -p icmp -s 192.0.2.2/26 -j ACCEPT	# client1 can ping server through firewall
+	sudo ip netns exec firewall iptables -A FORWARD -p tcp -s 192.0.2.66/26 -j ACCEPT 	# client2 can make HTTP request through firewall
+
+	# Server should be able to respond
+	sudo ip netns exec firewall iptables -A FORWARD -p icmp -s 192.0.2.130/26 -j ACCEPT	# client1 can ping server through firewall
+	sudo ip netns exec firewall iptables -A FORWARD -p tcp -s 192.0.2.130/26 -j ACCEPT 	# client2 can make HTTP request through firewall
+
+	# Rejected states
+	sudo ip netns exec firewall iptables -A FORWARD -j DROP					# DENY all remaining FORWARD requests
+	sudo ip netns exec firewall iptables -A INPUT -j DROP 					# DENY all remaining INPUT requests
+	echo "# FIREWALL $?"
 }
 
 test_firewall() {
