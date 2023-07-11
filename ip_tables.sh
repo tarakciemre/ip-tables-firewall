@@ -140,27 +140,28 @@ test_firewall() {
 	printf "\n############## TEST FIREWALL  #############"
 	sudo ip netns exec client1 ping -c 1 192.0.2.130 -w 1 > /dev/null
 	assert_succeed
-	printf ": Client1 pings Server... (should ACCEPT)"
+	printf ": Client1 pings Server... (should ACCEPT\n"
 
 	sudo ip netns exec client2 curl --connect-timeout 1 192.0.2.130:8000 > /dev/null
 	assert_succeed
-	printf ": Client2 requests HTTP page from Server... (should ACCEPT)"
+	printf ": Client2 requests HTTP page from Server... (should ACCEPT)\n"
 
-	#printf "$?"
 	sudo ip netns exec client2 ping -c 1 -w 1 192.0.2.67 > /dev/null
 	assert_succeed
-	printf ": Client2 pings Firewall... (should ACCEPT)"
+	printf ": Client2 pings Firewall... (should ACCEPT)\n"
 
-	#printf "$?"
 	sudo ip netns exec client1 ping -c 1 192.0.2.3 -w 1 > /dev/null
 	assert_fail
-	printf ": Client1 pings Firewall... (should REJECT)"
+	printf ": Client1 pings Firewall... (should REJECT)\n"
 
-	#printf "$?"
+	sudo ip netns exec firewall curl 142.250.187.174
+
+
 	printf "\n############## TEST FIREWALL END ##########\n"
 }
 
 # Reset the namespaces
+
 remove_namespaces
 add_namespaces
 
