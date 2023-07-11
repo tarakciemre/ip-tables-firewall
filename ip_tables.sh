@@ -94,6 +94,14 @@ setup_routes() {
 	sudo ip netns exec server ip route add 192.0.2.64/26 via 192.0.2.131 dev veth-firewall
 }
 
+reset_firewall() {
+	sudo ip netns exec firewall iptables -P INPUT ACCEPT
+	sudo ip netns exec firewall iptables -P OUTPUT ACCEPT
+	sudo ip netns exec firewall iptables -P FORWARD ACCEPT
+
+	sudo ip netns exec firewall iptables -F 
+}
+
 setup_firewall() {
 	# Accepted states
 	sudo ip netns exec firewall iptables -A INPUT -p icmp -s 192.0.2.66/26 -j ACCEPT  	# client2 can ping the firewall
@@ -167,7 +175,8 @@ test_pings
 sudo ip netns exec server node server.js &
 sleep 0.5
 
-setup_firewall
+#reset_firewall
+#setup_firewall
 test_firewall
 
 echo ""
