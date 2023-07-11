@@ -104,9 +104,11 @@ reset_firewall() {
 
 setup_firewall() {
 	# Accepted states
+
 	sudo ip netns exec firewall iptables -A INPUT -p icmp -s 192.0.2.66/26 -j ACCEPT  	# client2 can ping the firewall
 	sudo ip netns exec firewall iptables -A FORWARD -p icmp -s 192.0.2.2/26 -j ACCEPT	# client1 can ping server through firewall
 	sudo ip netns exec firewall iptables -A FORWARD -p tcp -s 192.0.2.66/26 -j ACCEPT 	# client2 can make HTTP request through firewall
+	sudo ip netns exec firewall iptables -A INPUT -i veth-host -j ACCEPT 					
 
 	# Server should be able to respond
 	sudo ip netns exec firewall iptables -A FORWARD -p icmp -s 192.0.2.130/26 -j ACCEPT	# client1 can ping server through firewall
@@ -169,8 +171,25 @@ set_veth_connections
 activate_interfaces
 examine_namespaces
 
+sudo iptables --policy FORWARD DROP
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo ip link add veth-firewall type veth peer name veth-host
+sudo ip link set veth-host neons firewall up
+sudo ip link set veth-firewall up
+sudo ip addr add 192.0.3.2/26 dev veth-firewall
+sudo ip netns exec firewall ip addr add 192.0.3.3/26 dev veth-host
+sudo iptables -I FORWARD -p icmp -s 192.0.3.3/26 -j ACCEPT
+sudo iptables -I FORWARD -p tcp -s 192.0.3.3/26 -j ACCEPT
+sudo iptables -I FORWARD -p icmp -d 192.0.3.3/26 -j ACCEPT
+sudo iptables -I FORWARD -p tcp -d 192.0.3.3/26 -j ACCEPT
+sudo iptables -t nat -I POSTROUTING -s 192.0.3.0/24 -j MASQUERADE
+
+sudo ip route add 192.0.2.0/24 via 192.0.3.3 dev veth-firewall
+sudo ip netns exec firewall ip route add default via 192.0.3.2 dev veth-host
+#sudo ip netns exec firewall ip route add 192.0.2.0/24 via 192.0.3.2 dev veth-firewall
+
 setup_routes
-test_pings
+#test_pings
 
 # Start the server
 sudo ip netns exec server node server.js &
