@@ -105,13 +105,44 @@ setup_firewall() {
 test_firewall() {
 	printf "\n############## TEST FIREWALL  #############"
 	printf "\n#### Client1 pings Server... (should ACCEPT) ==\n"
-	sudo ip netns exec client1 ping -c 1 192.0.2.130
+	sudo ip netns exec client1 ping -c 1 192.0.2.130 -w 1 > /dev/null
+	if [ $? == 0 ]
+	then
+		echo "Passed"
+	else
+		echo "Failed"
+	fi
+
 	printf "\n#### Client2 requests HTTP page from Server... (should ACCEPT) ==\n"
-	sudo ip netns exec client2 curl 192.0.2.130:8000
+	sudo ip netns exec client2 curl --connect-timeout 1 192.0.2.130:8000 > /dev/null
+	if [ $? == 0 ]
+	then
+		echo "Passed"
+	else
+		echo "Failed"
+	fi
+
+	#echo "$?"
 	printf "\n#### Client2 pings Firewall... (should ACCEPT) ==\n"
-	sudo ip netns exec client2 ping -c 1 192.0.2.67
+	sudo ip netns exec client2 ping -c 1 -w 1 192.0.2.67 > /dev/null
+	if [ $? == 0 ]
+	then
+		echo "Passed"
+	else
+		echo "Failed"
+	fi
+
+	#echo "$?"
 	printf "\n#### Client1 pings Firewall... (should REJECT) ==\n"
-	sudo ip netns exec client1 ping -c 1 192.0.2.3
+	sudo ip netns exec client1 ping -c 1 192.0.2.3 > -w 1 /dev/null
+	if [ $? == 0 ]
+	then
+		echo "Failed"
+	else
+		echo "Passed"
+	fi
+
+	#echo "$?"
 	printf "\n############## TEST FIREWALL END ##########\n"
 }
 
