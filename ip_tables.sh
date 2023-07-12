@@ -83,6 +83,11 @@ setup_routes() {
 	sudo ip netns exec client2 ip route add default via 192.0.2.67 dev veth-firewall
 	sudo ip netns exec client1 ip route add default via 192.0.2.3 dev veth-firewall
 
+	sudo ip netns exec firewall ip route add default via 192.0.2.195 dev veth-host
+	sudo ip route add 192.0.2.0/24 via 0.0.0.0 dev veth-ns
+	#sudo ip netns exec client1 ip route add default via 192.0.3.2 dev veth-host
+	#sudo ip netns exec client2 ip route add default via 192.0.3.2 dev veth-host
+
 	sudo ip netns exec firewall sysctl -w net.ipv4.ip_forward=1
 
 	## SETUP ROUTES
@@ -91,7 +96,7 @@ setup_routes() {
 	sudo ip netns exec firewall ip route add 192.0.2.128/26 via 0.0.0.0 dev veth-server
 
 	sudo ip netns exec server ip route add 192.0.2.0/26 via 192.0.2.131 dev veth-firewall
-	sudo ip netns exec server ip route add 192.0.2.64/26 via 192.0.2.131 dev veth-firewall
+	sudo ip netns exec server ip route add 192.0.2.64/26 via 192.0.2.331 dev veth-firewall
 }
 
 reset_firewall() {
@@ -100,6 +105,22 @@ reset_firewall() {
 	sudo ip netns exec firewall iptables -P FORWARD ACCEPT
 
 	sudo ip netns exec firewall iptables -F 
+}
+
+examine_ipaddr() {
+	echo "################# EXAMINE IPADDR ######################################"
+	echo "########### MAIN"
+	sudo ip addr
+	echo "########### FIREWALL"
+	sudo ip netns exec firewall ip addr
+	echo "########### CLIENT1"
+	sudo ip netns exec client1 ip addr
+	echo "########### CLIENT2"
+	sudo ip netns exec client2 ip addr
+	echo "########### SERVER"
+	sudo ip netns exec server ip addr
+	echo "######################################"
+
 }
 
 setup_firewall() {
@@ -154,7 +175,7 @@ test_firewall() {
 	assert_fail
 	printf ": Client1 pings Firewall... (should REJECT)\n"
 
-	sudo ip netns exec firewall curl 142.250.187.174
+	sudo ip netns exec firewall  142.250.187.174
 
 
 	printf "\n############## TEST FIREWALL END ##########\n"
@@ -167,7 +188,22 @@ add_namespaces
 
 set_veth_connections
 activate_interfaces
+examine_ipaddr
 examine_namespaces
+
+
+sudo iptables --policy FORWARD ACCEPT
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo ip link add veth-ns type veth peer name veth-host
+sudo ip link set veth-host netns firewall up
+sudo ip link set veth-ns up
+sudo ip addr add 192.0.2.195/26 dev veth-ns
+sudo ip netns exec firewall ip addr add 192.0.2.194/26 dev veth-host
+# sudo iptables -I FORWARD -p icmp -s 192.0.3.3/26 -j ACCEPT
+# sudo iptables -I FORWARD -p tcp -s 192.0.3.3/26 -j ACCEPT
+# sudo iptables -I FORWARD -p icmp -d 192.0.3.3/26 -j ACCEPT
+# sudo iptables -I FORWARD -p tcp -d 192.0.3.3/26 -j ACCEPT
+sudo iptables -t nat -I POSTROUTING -s 192.0.2.0/24 -j MASQUERADE
 
 setup_routes
 test_pings
@@ -178,7 +214,9 @@ sleep 0.5
 
 #reset_firewall
 #setup_firewall
+examine_ipaddr
 test_firewall
+
 
 echo ""
 
