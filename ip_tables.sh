@@ -84,7 +84,8 @@ setup_routes() {
 	sudo ip netns exec client1 ip route add default via 192.0.2.3 dev veth-firewall
 
 	sudo ip netns exec firewall ip route add default via 192.0.2.195 dev veth-host
-	sudo ip route add 192.0.2.0/24 via 0.0.0.0 dev veth-ns
+	# sudo ip route add 192.0.2.0/26 via 0.0.0.0 dev veth-ns
+	sudo ip route add 192.0.2.0/24 via 192.0.2.194 dev veth-ns
 	#sudo ip netns exec client1 ip route add default via 192.0.3.2 dev veth-host
 	#sudo ip netns exec client2 ip route add default via 192.0.3.2 dev veth-host
 
@@ -175,7 +176,7 @@ test_firewall() {
 	assert_fail
 	printf ": Client1 pings Firewall... (should REJECT)\n"
 
-	sudo ip netns exec firewall  142.250.187.174
+	sudo ip netns exec client1 curl 142.250.187.174
 
 
 	printf "\n############## TEST FIREWALL END ##########\n"
